@@ -7,7 +7,7 @@ from threading import Thread
 
 # --- AYARLAR ---
 TOKEN = "8349458683:AAEi-AFSYxn0Skds7r4VQIaogVl3Fugftyw"
-CHAT_ID = "1484256652"
+CHAT_ID = "-1003792245773"
 
 def telegram_gonder(mesaj):
     try:
