@@ -14,42 +14,55 @@ def telegram_gonder(mesaj):
         url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
         payload = {"chat_id": CHAT_ID, "text": mesaj}
         r = requests.post(url, json=payload, timeout=10)
-        print(f">>> Telegram Log: {r.status_code}")
         return r.status_code
-    except Exception as e:
-        print(f">>> Mesaj Hatasi: {e}")
+    except:
         return None
 
 def analiz_dongusu():
-    # Bot baslar baslamaz selam verir
-    print(">>> ANALIZ DONGUSU BASLADI!")
-    telegram_gonder("💰 Zengin Golden Cross Botu Render Üzerinde Aktif! 🚀")
+    print(">>> CIFT YONLU TARAMA BASLADI!")
+    telegram_gonder("🔔 Bot Güncellendi!\n📈 Golden Cross (Yükseliş)\n📉 Dead Cross (Düşüş)\n\n250+ Varlık taranıyor...")
 
-    # Takip edilecek semboller
-    takip_listesi = ["BTC-USD", "ETH-USD", "SOL-USD", "KAS-USD", "NVDA", "TSLA", "THYAO.IS"]
+    takip_listesi = [
+        # KRİPTO
+        "BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD", "ADA-USD", "AVAX-USD", "DOT-USD", "TRX-USD", "LINK-USD",
+        "MATIC-USD", "SHIB-USD", "LTC-USD", "BCH-USD", "ATOM-USD", "XLM-USD", "KAS-USD", "ALGO-USD", "NEAR-USD", "ICP-USD",
+        "INJ-USD", "OP-USD", "ARB-USD", "TIA-USD", "SUI-USD", "SEI-USD", "FET-USD", "RNDR-USD", "STX-USD", "FIL-USD",
+        # BIST 100
+        "THYAO.IS", "SISE.IS", "EREGL.IS", "TUPRS.IS", "FROTO.IS", "DOAS.IS", "TTRAK.IS", "KCHOL.IS", "SAHOL.IS", "ASELS.IS",
+        "AKBNK.IS", "GARAN.IS", "ISCTR.IS", "YKBNK.IS", "BIMAS.IS", "SASA.IS", "HEKTS.IS", "PGSUS.IS", "ARCLK.IS", "PETKM.IS",
+        "KARDM.IS", "TOASO.IS", "ENKAI.IS", "TCELL.IS", "TTKOM.IS", "KONTR.IS", "SMRTG.IS", "EUPWR.IS", "YEOTK.IS", "ASTOR.IS",
+        # NASDAQ & ABD
+        "NVDA", "TSLA", "AAPL", "MSFT", "GOOGL", "AMZN", "META", "AMD", "NFLX", "INTC", "PYPL", "ADBE", "CSCO", "PEP", "COST",
+        "AVGO", "QCOM", "TXN", "MU", "AMAT", "LRCX", "PANW", "SNPS", "CDNS", "MAR", "ORCL", "IBM", "UBER", "ABNB", "COIN",
+        # EMTİA
+        "GC=F", "SI=F", "CL=F", "PA=F", "PL=F", "HG=F", "NG=F"
+    ]
 
     while True:
-        print(f">>> Tarama yapiliyor: {time.ctime()}")
         for sembol in takip_listesi:
             try:
                 df = yf.download(sembol, period="2y", interval="1d", progress=False)
                 if len(df) < 145: continue
                 
-                # SMA Hesaplama
                 sma20 = df['Close'].rolling(window=20).mean()
                 sma140 = df['Close'].rolling(window=140).mean()
                 
-                # Golden Cross Kontrolü (Dünkü kapanıs ve bugünkü durum)
-                if sma20.iloc[-2] <= sma140.iloc[-2] and sma20.iloc[-1] > sma140.iloc[-1]:
-                    fiyat = float(df['Close'].iloc[-1])
-                    telegram_gonder(f"🚀 GOLDEN CROSS YAKALANDI!\n💎 Sembol: {sembol}\n💰 Fiyat: {fiyat:.2f}")
-                
-                time.sleep(3) # Limitlere takilmamak icin
-            except: continue
-        
-        time.sleep(600) # 10 dakikada bir tarar
+                fiyat = float(df['Close'].iloc[-1])
 
-# Render'in botu "canli" gormesi icin gereken sunucu
+                # 🚀 GOLDEN CROSS KONTROLÜ
+                if sma20.iloc[-2] <= sma140.iloc[-2] and sma20.iloc[-1] > sma140.iloc[-1]:
+                    telegram_gonder(f"🚀 GOLDEN CROSS (Yükseliş Sinyali!)\n\n💎 Varlık: {sembol}\n💰 Fiyat: {fiyat:.2f}\n✅ Trend yukarı dönüyor olabilir.")
+
+                # 💀 DEAD CROSS KONTROLÜ
+                elif sma20.iloc[-2] >= sma140.iloc[-2] and sma20.iloc[-1] < sma140.iloc[-1]:
+                    telegram_gonder(f"💀 DEAD CROSS (Düşüş Sinyali!)\n\n💎 Varlık: {sembol}\n💰 Fiyat: {fiyat:.2f}\n⚠️ Trend aşağı dönüyor olabilir.")
+                
+                time.sleep(1.2)
+            except:
+                continue
+        
+        time.sleep(900)
+
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
@@ -57,8 +70,6 @@ class HealthHandler(BaseHTTPRequestHandler):
         self.wfile.write(b"Bot Aktif")
 
 if __name__ == "__main__":
-    # Analizi arka planda baslat
     Thread(target=analiz_dongusu).start()
-    # Sunucuyu baslat (Render 10000 veya 8080 portunu bekleyebilir ama genelde otomatik algilar)
     server = HTTPServer(('0.0.0.0', 10000), HealthHandler)
     server.serve_forever()
