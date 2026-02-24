@@ -56,7 +56,7 @@ class HealthHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(b"Bot Aktif")
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     # Analizi arka planda baslat
     Thread(target=analiz_dongusu).start()
     # Sunucuyu baslat (Render 10000 veya 8080 portunu bekleyebilir ama genelde otomatik algilar)
