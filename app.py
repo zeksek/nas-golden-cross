@@ -17,57 +17,55 @@ def telegram_gonder(chat_id, mesaj):
         requests.post(url, json=payload, timeout=10)
     except: pass
 
-# --- 📋 TARAMA LİSTESİ ---
-liste = [
-    "BTC-USD", "ETH-USD", "SOL-USD", "AVAX-USD", "XRP-USD", "ADA-USD", "DOT-USD", "LINK-USD", "DOGE-USD",
-    "KAS-USD", "LTC-USD", "NEAR-USD", "ARB-USD", "OP-USD", "FET-USD", "INJ-USD",
-    "THYAO.IS", "SISE.IS", "EREGL.IS", "KCHOL.IS", "ASELS.IS", "TUPRS.IS", "ISCTR.IS", "AKBNK.IS", "GARAN.IS", "SASA.IS",
-    "NVDA", "TSLA", "AAPL", "MSFT", "AMZN", "GOOGL", "META", "NFLX", "AMD", "INTC", "PYPL", "COIN", "MSTR",
-    "GC=F", "SI=F", "^GSPC", "^IXIC"
-]
+# --- 📋 LİSTELER ---
+kripto_liste = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "AVAXUSDT", "XRPUSDT", "ADAUSDT", "DOTUSDT", "LINKUSDT", "DOGEUSDT", "KASUSDT"]
+hisse_liste = ["THYAO.IS", "SISE.IS", "EREGL.IS", "KCHOL.IS", "ASELS.IS", "TUPRS.IS", "GARAN.IS", "NVDA", "TSLA", "AAPL", "MSFT", "GC=F"]
+
+def heikin_ashi_hesapla(df):
+    ha_df = pd.DataFrame(index=df.index)
+    ha_df['HA_Close'] = (df['Open'] + df['High'] + df['Low'] + df['Close']) / 4
+    return ha_df['HA_Close']
+
+def veri_getir(sembol, interval, period):
+    try:
+        if "USDT" in sembol: # Kripto ise Binance'ten çek
+            limit = 300
+            # Binance interval dönüşümü
+            b_int = interval.replace("m", "m").replace("h", "h").replace("d", "d")
+            url = f"https://api.binance.com/api/v3/klines?symbol={sembol}&interval={b_int}&limit={limit}"
+            data = requests.get(url).json()
+            df = pd.DataFrame(data, columns=['Time', 'Open', 'High', 'Low', 'Close', 'Volume', '', '', '', '', '', ''])
+            df[['Open', 'High', 'Low', 'Close', 'Volume']] = df[['Open', 'High', 'Low', 'Close', 'Volume']].astype(float)
+            return df
+        else: # Hisse ise Yahoo'dan çek
+            t = yf.Ticker(sembol)
+            return t.history(period=period, interval=interval)
+    except: return None
 
 def tarama_motoru(periyot_adi, interval, period, sma_ayar, bekleme, hedef_id):
     while True:
-        for sembol in liste:
+        tam_liste = kripto_liste + hisse_liste
+        for sembol in tam_liste:
             try:
-                veri = yf.Ticker(sembol)
-                df = veri.history(period=period, interval=interval)
+                df = veri_getir(sembol, interval, period)
+                if df is None or df.empty or len(df) < max(sma_ayar): continue
                 
-                if df.empty or len(df) < max(sma_ayar) + 5: continue
-                
-                # --- 🕯️ HEIKIN-ASHI HESAPLAMA ---
-                # HA_Close = (Open + High + Low + Close) / 4
-                df['HA_Close'] = (df['Open'] + df['High'] + df['Low'] + df['Close']) / 4
-                
-                # HA_Open = (Önceki HA_Open + Önceki HA_Close) / 2
-                # (Kod içinde hız için basitleştirilmiş HA_Close bazlı trend takibi yapılır)
-                
-                # Ortalamalar artık HA_Close üzerinden hesaplanıyor
-                sma_kisa = df['HA_Close'].rolling(window=sma_ayar[0]).mean()
-                sma_uzun = df['HA_Close'].rolling(window=sma_ayar[1]).mean()
-                fiyat_ha = float(df['HA_Close'].iloc[-1])
+                ha_close = heikin_ashi_hesapla(df)
+                sma_kisa = ha_close.rolling(window=sma_ayar[0]).mean()
+                sma_uzun = ha_close.rolling(window=sma_ayar[1]).mean()
                 fiyat_normal = float(df['Close'].iloc[-1])
 
-                # 🚀 GOLDEN CROSS (Heikin-Ashi Bazlı)
                 if sma_kisa.iloc[-2] <= sma_uzun.iloc[-2] and sma_kisa.iloc[-1] > sma_uzun.iloc[-1]:
+                    avg_vol = df['Volume'].tail(15).mean()
+                    cvd_onay = "✅ GÜÇLÜ CVD" if df['Volume'].iloc[-1] > (avg_vol * 1.1) else "⚠️ ZAYIF HACİM"
                     
-                    # 📊 CVD/HACİM KONTROLÜ
-                    avg_vol = df['Volume'].tail(10).mean()
-                    current_vol = df['Volume'].iloc[-1]
-                    cvd_onay = "✅ CVD/HACİM ONAYLI" if current_vol > (avg_vol * 1.1) else "⚠️ ZAYIF HACİM"
-                    
-                    mesaj = (f"🚀 {sembol} {periyot_adi} HA-KESİŞİM\n"
-                            f"📈 HA Kapanış: {fiyat_ha:.2f}\n"
-                            f"💰 Gerçek Fiyat: {fiyat_normal:.2f}\n"
-                            f"📊 Durum: {cvd_onay}\n"
-                            f"🕯️ Heikin-Ashi Temelli Hesaplama Aktif")
-                    
-                    telegram_gonder(hedef_id, mesaj)
+                    msg = (f"🚀 {sembol} {periyot_adi} SİNYAL\n"
+                           f"💰 Fiyat: {fiyat_normal:.2f}\n"
+                           f"📊 Durum: {cvd_onay}\n"
+                           f"🕯️ Binance & HA Filtresi Aktif")
+                    telegram_gonder(hedef_id, msg)
                 
-                elif sma_kisa.iloc[-2] >= sma_uzun.iloc[-2] and sma_kisa.iloc[-1] < sma_uzun.iloc[-1]:
-                    telegram_gonder(hedef_id, f"💀 {sembol} {periyot_adi} HA-Satış\n💰 Fiyat: {fiyat_normal:.2f}")
-
-                time.sleep(1.2)
+                time.sleep(0.5)
             except: continue
         time.sleep(bekleme)
 
@@ -75,10 +73,15 @@ class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"HA-Engine Live")
+        self.wfile.write(b"Hybrid Engine Online")
 
 if __name__ == "__main__":
-    telegram_gonder(ID_KANAL, "🕯️ STRATEJİ GÜNCELLENDİ!\nHeikin-Ashi fiyat hesaplaması ve CVD onay sistemi devreye girdi.")
+    telegram_gonder(ID_KANAL, "🔗 BİNANCE ENTEGRASYONU TAMAMLANDI!\nKriptolar anlık, hisseler Yahoo üzerinden taranıyor.")
     
     Thread(target=tarama_motoru, args=("Günlük", "1d", "2y", (20, 140), 1800, ID_GUNLUK)).start()
-    Thread(target=tarama_motoru, args=("4 Saat", "4h", "100d", (50, 200)…
+    Thread(target=tarama_motoru, args=("4 Saat", "4h", "100d", (50, 200), 900, ID_KANAL)).start()
+    Thread(target=tarama_motoru, args=("1 Saat", "1h", "30d", (50, 200), 600, ID_KANAL)).start()
+    Thread(target=tarama_motoru, args=("15 Dakika", "15m", "7d", (20, 50), 300, ID_KANAL)).start()
+    
+    server = HTTPServer(('0.0.0.0', 10000), HealthHandler)
+    server.serve_forever()
