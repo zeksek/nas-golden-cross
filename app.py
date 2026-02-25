@@ -20,7 +20,7 @@ def telegram_gonder(chat_id, mesaj):
 # --- 📋 TEMİZLENMİŞ VARLIK LİSTESİ (Hatalı semboller çıkarıldı) ---
 liste = [
     "BTC-USD", "ETH-USD", "SOL-USD", "AVAX-USD", "XRP-USD", "ADA-USD", "DOT-USD", "LINK-USD", "DOGE-USD",
-    "POL-USD", "LTC-USD", "NEAR-USD", "ARB-USD", "OP-USD", "RENDER-USD", "FET-USD", "INJ-USD",
+    "KAS-USD", "LTC-USD", "NEAR-USD", "ARB-USD", "OP-USD", "RENDER-USD", "FET-USD", "INJ-USD",
     "THYAO.IS", "SISE.IS", "EREGL.IS", "KCHOL.IS", "ASELS.IS", "TUPRS.IS", "ISCTR.IS", "AKBNK.IS", "GARAN.IS", "SASA.IS",
     "EKGYO.IS", "YKBNK.IS", "VAKBN.IS", "HALKB.IS", "BIMAS.IS", "ARCLK.IS", "FROTO.IS", "TOASO.IS", "PETKM.IS", "GUBRF.IS",
     "NVDA", "TSLA", "AAPL", "MSFT", "AMZN", "GOOGL", "META", "NFLX", "AMD", "INTC", "PYPL", "TSM", "BABA", "COIN", "MSTR",
