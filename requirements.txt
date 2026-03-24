@@ -1,3 +1,5 @@
+binance-futures-connector
 yfinance
 pandas
+numpy
 requests
